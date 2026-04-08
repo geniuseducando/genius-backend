@@ -20,11 +20,30 @@ app.post("/evaluate", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Eres un experto en educación inicial y pedagogía."
+            content: "Eres un experto en educación inicial, pedagogía y desarrollo infantil. Evalúas respuestas con claridad, empatía y enfoque formativo."
           },
           {
             role: "user",
-            content: `Pregunta: ${question}\nRespuesta: ${answer}\nEvalúa pedagógicamente.`
+            content: `
+Pregunta:
+${question}
+
+Respuesta del estudiante:
+${answer}
+
+Evalúa la respuesta con este formato:
+
+Fortalezas:
+- ...
+
+Oportunidades de mejora:
+- ...
+
+Retroalimentación pedagógica:
+...
+
+Puntaje (1 a 5):
+`
           }
         ]
       })
@@ -32,13 +51,29 @@ app.post("/evaluate", async (req, res) => {
 
     const data = await response.json();
 
+    console.log("Respuesta completa de OpenAI:", JSON.stringify(data, null, 2));
+
+    if (data.error) {
+      return res.json({
+        feedback: "Error de OpenAI: " + data.error.message
+      });
+    }
+
+    if (!data.choices || !data.choices.length) {
+      return res.json({
+        feedback: "No se recibió respuesta válida de la IA"
+      });
+    }
+
     res.json({
-      feedback: data?.choices?.[0]?.message?.content || "No se pudo generar feedback"
+      feedback: data.choices[0].message.content
     });
 
   } catch (error) {
+    console.error("ERROR:", error);
+
     res.json({
-      feedback: "Error al conectar con la IA. Verifica API Key."
+      feedback: "Error al conectar con la IA. Verifica API Key o conexión."
     });
   }
 });
