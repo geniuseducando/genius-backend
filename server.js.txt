@@ -1,5 +1,4 @@
 import express from "express";
-import fetch from "node-fetch";
 import cors from "cors";
 
 const app = express();
@@ -32,10 +31,15 @@ app.post("/evaluate", async (req, res) => {
     });
 
     const data = await response.json();
-    res.json({ feedback: data.choices[0].message.content });
+
+    res.json({
+      feedback: data?.choices?.[0]?.message?.content || "No se pudo generar feedback"
+    });
 
   } catch (error) {
-    res.status(500).json({ error: "Error al evaluar" });
+    res.json({
+      feedback: "Error al conectar con la IA. Verifica API Key."
+    });
   }
 });
 
