@@ -8,6 +8,9 @@ app.use(express.json());
 app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
 
+  // 🔍 DEBUG: ver si la API key existe
+  console.log("API KEY:", process.env.OPENAI_API_KEY);
+
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -53,18 +56,21 @@ Puntaje (1 a 5):
 
     console.log("Respuesta completa de OpenAI:", JSON.stringify(data, null, 2));
 
+    // 🔴 Error de OpenAI
     if (data.error) {
       return res.json({
         feedback: "Error de OpenAI: " + data.error.message
       });
     }
 
+    // 🔴 Respuesta vacía
     if (!data.choices || !data.choices.length) {
       return res.json({
         feedback: "No se recibió respuesta válida de la IA"
       });
     }
 
+    // 🟢 Respuesta correcta
     res.json({
       feedback: data.choices[0].message.content
     });
