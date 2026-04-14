@@ -1,15 +1,42 @@
 import express from "express";
 import cors from "cors";
+import fs from "fs";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+const FILE_PATH = "data.json";
+
+// Crear archivo si no existe
+if (!fs.existsSync(FILE_PATH)) {
+  fs.writeFileSync(FILE_PATH, JSON.stringify([]));
+}
+
+// 🧠 GUARDAR RESPUESTA
+app.post("/save", (req, res) => {
+  const newData = req.body;
+
+  const data = JSON.parse(fs.readFileSync(FILE_PATH));
+  data.push({
+    ...newData,
+    date: new Date()
+  });
+
+  fs.writeFileSync(FILE_PATH, JSON.stringify(data, null, 2));
+
+  res.json({ message: "Guardado correctamente" });
+});
+
+// 📊 OBTENER RESULTADOS
+app.get("/results", (req, res) => {
+  const data = JSON.parse(fs.readFileSync(FILE_PATH));
+  res.json(data);
+});
+
+// 🤖 EVALUAR CON IA
 app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
-
-  // 🔍 DEBUG: ver si la API key existe
-  console.log("API KEY:", process.env.OPENAI_API_KEY);
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -23,30 +50,11 @@ app.post("/evaluate", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Eres un experto en educación inicial, pedagogía y desarrollo infantil. Evalúas respuestas con claridad, empatía y enfoque formativo."
+            content: "Eres experto en educación inicial y pedagogía."
           },
           {
             role: "user",
-            content: `
-Pregunta:
-${question}
-
-Respuesta del estudiante:
-${answer}
-
-Evalúa la respuesta con este formato:
-
-Fortalezas:
-- ...
-
-Oportunidades de mejora:
-- ...
-
-Retroalimentación pedagógica:
-...
-
-Puntaje (1 a 5):
-`
+            content: `Pregunta: ${question}\nRespuesta: ${answer}\nEvalúa con fortalezas, mejoras y puntaje.`
           }
         ]
       })
@@ -54,34 +62,15 @@ Puntaje (1 a 5):
 
     const data = await response.json();
 
-    console.log("Respuesta completa de OpenAI:", JSON.stringify(data, null, 2));
-
-    // 🔴 Error de OpenAI
-    if (data.error) {
-      return res.json({
-        feedback: "Error de OpenAI: " + data.error.message
-      });
-    }
-
-    // 🔴 Respuesta vacía
-    if (!data.choices || !data.choices.length) {
-      return res.json({
-        feedback: "No se recibió respuesta válida de la IA"
-      });
-    }
-
-    // 🟢 Respuesta correcta
     res.json({
-      feedback: data.choices[0].message.content
+      feedback: data?.choices?.[0]?.message?.content || "Sin respuesta"
     });
 
   } catch (error) {
-    console.error("ERROR:", error);
-
     res.json({
-      feedback: "Error al conectar con la IA. Verifica API Key o conexión."
+      feedback: "Error con IA"
     });
   }
 });
 
-app.listen(3000, () => console.log("Servidor corriendo"));
+app.listen(3000, () => console.log("Servidor con BD corriendo"));
