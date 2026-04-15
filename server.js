@@ -77,14 +77,23 @@ app.post("/evaluate", async (req, res) => {
   }
 });
 
-// 📄 GENERAR PDF (VERSIÓN FINAL CORREGIDA)
+// 📄 GENERAR PDF POR ESTUDIANTE (VERSIÓN PRO)
 app.get("/generate-pdf", (req, res) => {
   const data = JSON.parse(fs.readFileSync(FILE_PATH));
+
+  const studentName = req.query.student || "Estudiante";
+
+  const filteredResults = data.filter(
+    item => item.studentName === studentName
+  );
 
   const doc = new PDFDocument();
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", "inline; filename=Informe_Evaluacion_Genius.pdf");
+  res.setHeader(
+    "Content-Disposition",
+    "inline; filename=Informe_Evaluacion_Genius.pdf"
+  );
 
   doc.pipe(res);
 
@@ -94,16 +103,15 @@ app.get("/generate-pdf", (req, res) => {
   });
 
   doc.moveDown();
-  doc.fontSize(12).text(`Fecha: ${new Date().toLocaleDateString()}`);
+  doc.fontSize(12).text(`Estudiante: ${studentName}`);
+  doc.text(`Fecha: ${new Date().toLocaleDateString()}`);
 
   doc.moveDown();
 
-  const lastResults = data.slice(-8);
-
-  if (lastResults.length === 0) {
-    doc.text("No hay resultados disponibles.");
+  if (filteredResults.length === 0) {
+    doc.text("No hay resultados para este estudiante.");
   } else {
-    lastResults.forEach((item, index) => {
+    filteredResults.forEach((item, index) => {
       doc.fontSize(14).text(`Situación ${index + 1}`, {
         underline: true,
       });
