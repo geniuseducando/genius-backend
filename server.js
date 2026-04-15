@@ -86,7 +86,7 @@ app.post("/generate-pdf", (req, res) => {
   res.setHeader("Content-Type", "application/pdf");
   res.setHeader(
     "Content-Disposition",
-    "attachment; filename=Informe_Evaluacion_Genius.pdf"
+    "inline; filename=Informe_Evaluacion_Genius.pdf"
   );
 
   doc.pipe(res);
