@@ -77,62 +77,18 @@ app.post("/evaluate", async (req, res) => {
   }
 });
 
-// 📄 GENERAR PDF (POST - opcional)
-app.post("/generate-pdf", (req, res) => {
-  const { results, studentName } = req.body;
-
-  const doc = new PDFDocument();
-
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    "inline; filename=Informe_Evaluacion_Genius.pdf"
-  );
-
-  doc.pipe(res);
-
-  doc.fontSize(18).text("Informe de Evaluación Genius", {
-    align: "center",
-  });
-
-  doc.moveDown();
-  doc.fontSize(12).text(`Estudiante: ${studentName || "Sin nombre"}`);
-  doc.text(`Fecha: ${new Date().toLocaleDateString()}`);
-
-  doc.moveDown();
-
-  results.forEach((item, index) => {
-    doc.fontSize(14).text(`Situación ${index + 1}`, {
-      underline: true,
-    });
-
-    doc.moveDown(0.5);
-    doc.fontSize(12).text(`Pregunta: ${item.question}`);
-    doc.moveDown(0.5);
-    doc.text(`Respuesta: ${item.answer}`);
-    doc.moveDown(0.5);
-    doc.text(`Feedback IA: ${item.feedback}`);
-
-    doc.moveDown();
-  });
-
-  doc.end();
-});
-
-// 📄 GENERAR PDF (GET - ESTE ES EL QUE USARÁ CANVA)
+// 📄 GENERAR PDF (VERSIÓN FINAL CORREGIDA)
 app.get("/generate-pdf", (req, res) => {
   const data = JSON.parse(fs.readFileSync(FILE_PATH));
 
   const doc = new PDFDocument();
 
   res.setHeader("Content-Type", "application/pdf");
-  res.setHeader(
-    "Content-Disposition",
-    "attachment; filename=Informe_Evaluacion_Genius.pdf"
-  );
+  res.setHeader("Content-Disposition", "inline; filename=Informe_Evaluacion_Genius.pdf");
 
   doc.pipe(res);
 
+  // Título
   doc.fontSize(18).text("Informe de Evaluación Genius", {
     align: "center",
   });
@@ -142,23 +98,26 @@ app.get("/generate-pdf", (req, res) => {
 
   doc.moveDown();
 
-  // Toma las últimas 8 respuestas (1 evaluación completa)
   const lastResults = data.slice(-8);
 
-  lastResults.forEach((item, index) => {
-    doc.fontSize(14).text(`Situación ${index + 1}`, {
-      underline: true,
+  if (lastResults.length === 0) {
+    doc.text("No hay resultados disponibles.");
+  } else {
+    lastResults.forEach((item, index) => {
+      doc.fontSize(14).text(`Situación ${index + 1}`, {
+        underline: true,
+      });
+
+      doc.moveDown(0.5);
+      doc.fontSize(12).text(`Pregunta: ${item.question || "Sin pregunta"}`);
+      doc.moveDown(0.5);
+      doc.text(`Respuesta: ${item.answer || "Sin respuesta"}`);
+      doc.moveDown(0.5);
+      doc.text(`Feedback IA: ${item.feedback || "Sin feedback"}`);
+
+      doc.moveDown();
     });
-
-    doc.moveDown(0.5);
-    doc.fontSize(12).text(`Pregunta: ${item.question}`);
-    doc.moveDown(0.5);
-    doc.text(`Respuesta: ${item.answer}`);
-    doc.moveDown(0.5);
-    doc.text(`Feedback IA: ${item.feedback}`);
-
-    doc.moveDown();
-  });
+  }
 
   doc.end();
 });
