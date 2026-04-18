@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 import PDFDocument from "pdfkit";
-import fetch from "node-fetch"; // Asegúrate de que esta línea coincida con tu versión de node
 
 const app = express();
 
@@ -22,7 +21,7 @@ if (!fs.existsSync(FILE_PATH)) {
   fs.writeFileSync(FILE_PATH, JSON.stringify([]));
 }
 
-// 🌐 RUTA DE INICIO (Para que no de error al entrar a la URL)
+// 🌐 RUTA DE INICIO (Para evitar el error "Cannot GET /")
 app.get('/', (req, res) => {
   res.send('Servidor de Evaluación Genius Activo ✅');
 });
@@ -57,7 +56,7 @@ app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://openai.com", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -139,7 +138,7 @@ app.get("/generate-pdf", (req, res) => {
 });
 
 // 🚀 SERVIDOR
-const PORT = process.env.PORT || 10000; // Render prefiere el puerto 10000
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto " + PORT);
 });
