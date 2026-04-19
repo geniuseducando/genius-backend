@@ -12,20 +12,20 @@ if (!fs.existsSync(FILE_PATH)) fs.writeFileSync(FILE_PATH, JSON.stringify([]));
 
 app.get('/', (req, res) => res.send('Servidor Genius Activo ✅'));
 
-// 🤖 EVALUAR CON IA (VERSIÓN FINAL ANTI-ERRORES)
-const handleEvaluate = async (req, res) => {
+app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
-  console.log("Conectando con OpenAI...");
+  console.log("--- Iniciando Evaluación ---");
 
   try {
     const apiResponse = await fetch("https://openai.com", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY.trim()}`
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY.trim()}`,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "Eres experto en educación inicial. Evalúa con: Fortalezas, Oportunidades de mejora, Recomendación y Puntaje (1-5)." },
           { role: "user", content: `Pregunta: ${question}\nRespuesta: ${answer}` }
@@ -33,31 +33,25 @@ const handleEvaluate = async (req, res) => {
       })
     });
 
-    // Verificamos si la respuesta es exitosa
+    console.log("Status de OpenAI:", apiResponse.status);
+
     if (!apiResponse.ok) {
       const errorText = await apiResponse.text();
-      console.error("Error de OpenAI (No OK):", errorText);
-      return res.json({ choices: [{ message: { content: "Error de API: " + apiResponse.status } }] });
+      console.error("Detalle del error:", errorText.substring(0, 500)); // Loguea solo el inicio del error
+      return res.json({ choices: [{ message: { content: "Error de conexión con OpenAI (Status " + apiResponse.status + ")" } }] });
     }
 
     const data = await apiResponse.json();
-
-    // Acceso directo y seguro al primer resultado
     const aiText = data.choices[0].message.content;
-    console.log("¡Respuesta obtenida con éxito!");
-
-    res.json({
-      choices: [{ message: { content: aiText } }]
-    });
+    
+    console.log("¡Éxito! Feedback generado.");
+    res.json({ choices: [{ message: { content: aiText } }] });
 
   } catch (error) {
     console.error("Error fatal:", error.message);
-    res.json({ choices: [{ message: { content: "Error de conexión: " + error.message } }] });
+    res.json({ choices: [{ message: { content: "Error crítico: " + error.message } }] });
   }
-};
-
-app.post("/evaluate", handleEvaluate);
-app.post("/evaluate/", handleEvaluate);
+});
 
 app.post("/save", (req, res) => {
   try {
@@ -79,4 +73,4 @@ app.get("/generate-pdf", (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Servidor iniciado"));
+app.listen(PORT, () => console.log("Servidor listo"));
