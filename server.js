@@ -13,7 +13,7 @@ if (!fs.existsSync(FILE_PATH)) { fs.writeFileSync(FILE_PATH, JSON.stringify([]))
 
 app.get('/', (req, res) => res.send('Servidor Genius Activo ✅'));
 
-// 🤖 EVALUAR CON IA
+// 🤖 EVALUAR CON IA (Ruta de datos corregida)
 app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
   try {
@@ -39,8 +39,9 @@ app.post("/evaluate", async (req, res) => {
       return res.json({ feedback: "Error de API: " + data.error.message });
     }
 
-    // RUTA CORREGIDA SIN PUNTOS EXTRA
+    // ESTA ES LA LÍNEA CRÍTICA CORREGIDA
     const aiFeedback = data.choices[0].message.content;
+    
     res.json({ feedback: aiFeedback });
 
   } catch (error) {
@@ -49,7 +50,6 @@ app.post("/evaluate", async (req, res) => {
   }
 });
 
-// 🧠 GUARDAR
 app.post("/save", (req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(FILE_PATH));
@@ -59,7 +59,6 @@ app.post("/save", (req, res) => {
   } catch (e) { res.status(500).json({ error: "Error" }); }
 });
 
-// 📄 PDF
 app.get("/generate-pdf", (req, res) => {
   const student = req.query.student || "Estudiante";
   const doc = new PDFDocument();
