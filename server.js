@@ -16,12 +16,10 @@ app.use(express.json());
 
 const FILE_PATH = "data.json";
 
-// Crear archivo si no existe
 if (!fs.existsSync(FILE_PATH)) {
   fs.writeFileSync(FILE_PATH, JSON.stringify([]));
 }
 
-// 🌐 RUTA DE INICIO
 app.get('/', (req, res) => {
   res.send('Servidor de Evaluación Genius Activo ✅');
 });
@@ -31,12 +29,7 @@ app.post("/save", (req, res) => {
   try {
     const newData = req.body;
     const data = JSON.parse(fs.readFileSync(FILE_PATH));
-
-    data.push({
-      ...newData,
-      date: new Date()
-    });
-
+    data.push({ ...newData, date: new Date() });
     fs.writeFileSync(FILE_PATH, JSON.stringify(data, null, 2));
     res.json({ message: "Guardado correctamente" });
   } catch (error) {
@@ -45,7 +38,6 @@ app.post("/save", (req, res) => {
   }
 });
 
-// 📊 OBTENER RESULTADOS
 app.get("/results", (req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(FILE_PATH));
@@ -55,7 +47,7 @@ app.get("/results", (req, res) => {
   }
 });
 
-// 🤖 EVALUAR CON IA (Usando fetch nativo de Node v22)
+// 🤖 EVALUAR CON IA (Línea de respuesta corregida)
 app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
 
@@ -71,12 +63,9 @@ app.post("/evaluate", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Eres un experto en educación inicial y pedagogía. Evalúa la respuesta del estudiante de forma constructiva. Estructura tu respuesta con: Fortalezas, Oportunidades de mejora, Recomendación y Puntaje (1 a 5)."
+            content: "Eres un experto en educación inicial. Evalúa de forma constructiva con: Fortalezas, Oportunidades de mejora, Recomendación y Puntaje (1-5)."
           },
-          {
-            role: "user",
-            content: `Pregunta: ${question}\nRespuesta: ${answer}`
-          }
+          { role: "user", content: `Pregunta: ${question}\nRespuesta: ${answer}` }
         ]
       })
     });
@@ -85,77 +74,53 @@ app.post("/evaluate", async (req, res) => {
 
     if (data.error) {
       console.error("Error de OpenAI:", data.error.message);
-      return res.json({ feedback: "Error en la configuración de la IA" });
+      return res.json({ feedback: "Error: " + data.error.message });
     }
 
-    const aiFeedback = data.choices?.[0]?.message?.content || "Sin respuesta";
+    // CORRECCIÓN AQUÍ: Acceso limpio a la respuesta
+    const aiFeedback = data.choices?.[0]?.message?.content || "No se obtuvo respuesta de la IA.";
 
-    res.json({
-      feedback: aiFeedback
-    });
+    res.json({ feedback: aiFeedback });
 
   } catch (error) {
     console.error("Error en /evaluate:", error);
-    res.json({ feedback: "Error al conectar con el servidor de IA" });
+    res.json({ feedback: "Error de conexión con el servicio de IA." });
   }
 });
 
-// 📄 GENERAR PDF POR ESTUDIANTE
+// 📄 GENERAR PDF
 app.get("/generate-pdf", (req, res) => {
   try {
     const data = JSON.parse(fs.readFileSync(FILE_PATH));
     const studentName = req.query.student || "Estudiante";
-
-    const filteredResults = data.filter(
-      item => item.studentName === studentName
-    );
+    const filteredResults = data.filter(item => item.studentName === studentName);
 
     const doc = new PDFDocument();
-
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=Informe_Evaluacion_${studentName}.pdf`
-    );
-
+    res.setHeader("Content-Disposition", `attachment; filename=Informe_${studentName}.pdf`);
     doc.pipe(res);
 
-    // Diseño del PDF
-    doc.fontSize(20).fillColor('#2c3e50').text("Informe de Evaluación Genius", { align: "center" });
-    doc.moveDown();
-    doc.fontSize(12).fillColor('black').text(`Estudiante: ${studentName}`);
-    doc.text(`Fecha: ${new Date().toLocaleDateString()}`);
-    doc.moveDown();
-    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
-    doc.moveDown();
+    doc.fontSize(20).text("Informe de Evaluación Genius", { align: "center" });
+    doc.moveDown().fontSize(12).text(`Estudiante: ${studentName}`);
+    doc.text(`Fecha: ${new Date().toLocaleDateString()}`).moveDown();
 
     if (filteredResults.length === 0) {
-      doc.text("No hay resultados registrados para este estudiante.");
+      doc.text("No hay registros para este estudiante.");
     } else {
       filteredResults.forEach((item, index) => {
-        doc.fontSize(14).fillColor('#16a085').text(`Situación ${index + 1}`, { underline: true });
-        doc.moveDown(0.5);
-        doc.fontSize(11).fillColor('black').text(`Pregunta:`, { oblique: true });
-        doc.text(item.question || "N/A");
-        doc.moveDown(0.5);
-        doc.text(`Respuesta:`, { oblique: true });
-        doc.text(item.answer || "Sin respuesta");
-        doc.moveDown(0.5);
-        doc.text(`Retroalimentación de la IA:`, { oblique: true });
-        doc.text(item.feedback || "Sin feedback");
-        doc.moveDown(1.5);
+        doc.fontSize(14).text(`Evaluación ${index + 1}`, { underline: true }).moveDown(0.5);
+        doc.fontSize(11).text(`Pregunta: ${item.question}`);
+        doc.text(`Respuesta: ${item.answer}`);
+        doc.text(`Feedback: ${item.feedback}`).moveDown();
       });
     }
-
     doc.end();
   } catch (error) {
-    console.error("Error PDF:", error);
-    res.status(500).send("Error al generar el PDF");
+    res.status(500).send("Error al generar PDF");
   }
 });
 
-// 🚀 SERVIDOR
-const PORT = process.env.PORT || 10000; // Render usa usualmente el puerto 10000
+const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto " + PORT);
 });
