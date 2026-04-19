@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 import PDFDocument from "pdfkit";
-import fetch from "node-fetch"; // Asegúrate de tenerlo en tu package.json
 
 const app = express();
 
@@ -56,7 +55,7 @@ app.get("/results", (req, res) => {
   }
 });
 
-// 🤖 EVALUAR CON IA (Corregido)
+// 🤖 EVALUAR CON IA (Usando fetch nativo de Node v22)
 app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
 
@@ -156,7 +155,7 @@ app.get("/generate-pdf", (req, res) => {
 });
 
 // 🚀 SERVIDOR
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000; // Render usa usualmente el puerto 10000
 app.listen(PORT, () => {
   console.log("Servidor corriendo en puerto " + PORT);
 });
