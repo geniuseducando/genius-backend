@@ -5,18 +5,21 @@ import PDFDocument from "pdfkit";
 
 const app = express();
 
+// Configuración de CORS total
 app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json());
 
 const FILE_PATH = "data.json";
 if (!fs.existsSync(FILE_PATH)) { fs.writeFileSync(FILE_PATH, JSON.stringify([])); }
 
+// Ruta base para confirmar que el servidor vive
 app.get('/', (req, res) => res.send('Servidor Genius Activo ✅'));
 
-// 🤖 EVALUAR CON IA (Ajustado para el código de tu Canva)
-app.post("/evaluate", async (req, res) => {
+// 🤖 EVALUAR CON IA (Compatibilidad Total)
+const handleEvaluate = async (req, res) => {
   try {
     const { question, answer } = req.body;
+    console.log("Evaluando:", { question, answer });
 
     const response = await fetch("https://openai.com", {
       method: "POST",
@@ -36,26 +39,32 @@ app.post("/evaluate", async (req, res) => {
     const data = await response.json();
 
     if (data.error) {
+      console.error("OpenAI Error:", data.error.message);
       return res.status(500).json({ error: data.error.message });
     }
 
-    // IMPORTANTE: Tu código de Canva busca 'data.choices[0].message.content'
-    // Así que devolvemos exactamente esa estructura
+    // Estructura exacta que pide tu código de Canva
+    const aiText = data.choices[0].message.content;
+    
     res.json({
       choices: [
         {
           message: {
-            content: data.choices[0].message.content
+            content: aiText
           }
         }
       ]
     });
 
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Error de conexión" });
+    console.error("Error Servidor:", error);
+    res.status(500).json({ error: "Error interno del servidor" });
   }
-});
+};
+
+// Registramos la ruta con y sin barra diagonal para evitar el error HTML 404
+app.post("/evaluate", handleEvaluate);
+app.post("/evaluate/", handleEvaluate);
 
 app.post("/save", (req, res) => {
   try {
@@ -73,9 +82,9 @@ app.get("/generate-pdf", (req, res) => {
   res.setHeader("Content-Disposition", `attachment; filename=Informe.pdf`);
   doc.pipe(res);
   doc.fontSize(20).text("Informe Genius", { align: "center" }).moveDown();
-  doc.fontSize(12).text(`Estudiante: ${student}`).moveDown();
+  doc.text(`Estudiante: ${student}`).moveDown();
   doc.end();
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Servidor iniciado"));
+app.listen(PORT, () => console.log("Servidor iniciado en puerto " + PORT));
