@@ -2,14 +2,15 @@ import express from "express";
 import cors from "cors";
 import fs from "fs";
 import PDFDocument from "pdfkit";
+import fetch from "node-fetch"; // Asegúrate de tenerlo en tu package.json
 
 const app = express();
 
-// 1. Configuración de CORS corregida para Canva
+// 1. Configuración de CORS para Canva
 app.use(cors({
   origin: '*', 
   methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json());
@@ -21,7 +22,7 @@ if (!fs.existsSync(FILE_PATH)) {
   fs.writeFileSync(FILE_PATH, JSON.stringify([]));
 }
 
-// 🌐 RUTA DE INICIO (Para evitar el error "Cannot GET /")
+// 🌐 RUTA DE INICIO
 app.get('/', (req, res) => {
   res.send('Servidor de Evaluación Genius Activo ✅');
 });
@@ -47,11 +48,15 @@ app.post("/save", (req, res) => {
 
 // 📊 OBTENER RESULTADOS
 app.get("/results", (req, res) => {
-  const data = JSON.parse(fs.readFileSync(FILE_PATH));
-  res.json(data);
+  try {
+    const data = JSON.parse(fs.readFileSync(FILE_PATH));
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ error: "Error al leer datos" });
+  }
 });
 
-// 🤖 EVALUAR CON IA
+// 🤖 EVALUAR CON IA (Corregido)
 app.post("/evaluate", async (req, res) => {
   const { question, answer } = req.body;
 
@@ -67,24 +72,32 @@ app.post("/evaluate", async (req, res) => {
         messages: [
           {
             role: "system",
-            content: "Eres experto en educación inicial y pedagogía. Evalúa respuestas de forma clara, profesional y constructiva."
+            content: "Eres un experto en educación inicial y pedagogía. Evalúa la respuesta del estudiante de forma constructiva. Estructura tu respuesta con: Fortalezas, Oportunidades de mejora, Recomendación y Puntaje (1 a 5)."
           },
           {
             role: "user",
-            content: `Pregunta: ${question}\nRespuesta: ${answer}\n\nEvalúa con:\n- Fortalezas\n- Oportunidades de mejora\n- Recomendación\n- Puntaje (1 a 5)`
+            content: `Pregunta: ${question}\nRespuesta: ${answer}`
           }
         ]
       })
     });
 
     const data = await response.json();
+
+    if (data.error) {
+      console.error("Error de OpenAI:", data.error.message);
+      return res.json({ feedback: "Error en la configuración de la IA" });
+    }
+
+    const aiFeedback = data.choices?.[0]?.message?.content || "Sin respuesta";
+
     res.json({
-      feedback: data?.choices?.[0]?.message?.content || "Sin respuesta"
+      feedback: aiFeedback
     });
 
   } catch (error) {
-    console.error(error);
-    res.json({ feedback: "Error con IA" });
+    console.error("Error en /evaluate:", error);
+    res.json({ feedback: "Error al conectar con el servidor de IA" });
   }
 });
 
@@ -100,7 +113,6 @@ app.get("/generate-pdf", (req, res) => {
 
     const doc = new PDFDocument();
 
-    // Configuración para descarga automática
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader(
       "Content-Disposition",
@@ -109,24 +121,30 @@ app.get("/generate-pdf", (req, res) => {
 
     doc.pipe(res);
 
-    doc.fontSize(18).text("Informe de Evaluación Genius", { align: "center" });
+    // Diseño del PDF
+    doc.fontSize(20).fillColor('#2c3e50').text("Informe de Evaluación Genius", { align: "center" });
     doc.moveDown();
-    doc.fontSize(12).text(`Estudiante: ${studentName}`);
+    doc.fontSize(12).fillColor('black').text(`Estudiante: ${studentName}`);
     doc.text(`Fecha: ${new Date().toLocaleDateString()}`);
+    doc.moveDown();
+    doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke();
     doc.moveDown();
 
     if (filteredResults.length === 0) {
-      doc.text("No hay resultados registrados para este nombre.");
+      doc.text("No hay resultados registrados para este estudiante.");
     } else {
       filteredResults.forEach((item, index) => {
-        doc.fontSize(14).text(`Situación ${index + 1}`, { underline: true });
+        doc.fontSize(14).fillColor('#16a085').text(`Situación ${index + 1}`, { underline: true });
         doc.moveDown(0.5);
-        doc.fontSize(12).text(`Pregunta: ${item.question || "N/A"}`);
+        doc.fontSize(11).fillColor('black').text(`Pregunta:`, { oblique: true });
+        doc.text(item.question || "N/A");
         doc.moveDown(0.5);
-        doc.text(`Respuesta: ${item.answer || "Sin respuesta"}`);
+        doc.text(`Respuesta:`, { oblique: true });
+        doc.text(item.answer || "Sin respuesta");
         doc.moveDown(0.5);
-        doc.text(`Feedback IA: ${item.feedback || "Sin feedback"}`);
-        doc.moveDown();
+        doc.text(`Retroalimentación de la IA:`, { oblique: true });
+        doc.text(item.feedback || "Sin feedback");
+        doc.moveDown(1.5);
       });
     }
 
