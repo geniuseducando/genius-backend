@@ -13,7 +13,7 @@ if (!fs.existsSync(FILE_PATH)) { fs.writeFileSync(FILE_PATH, JSON.stringify([]))
 
 app.get('/', (req, res) => res.send('Servidor Genius Activo ✅'));
 
-// 🤖 EVALUAR CON IA (VERSIÓN FINAL BLINDADA)
+// 🤖 EVALUAR CON IA (Ajustado para el código de tu Canva)
 app.post("/evaluate", async (req, res) => {
   try {
     const { question, answer } = req.body;
@@ -36,19 +36,24 @@ app.post("/evaluate", async (req, res) => {
     const data = await response.json();
 
     if (data.error) {
-      console.error("Error de OpenAI:", data.error);
-      return res.json({ feedback: "Error de API: " + data.error.message });
+      return res.status(500).json({ error: data.error.message });
     }
 
-    // Extracción segura del contenido
-    const aiFeedback = data.choices[0].message.content;
-    
-    // Enviamos la respuesta limpia
-    res.json({ feedback: aiFeedback });
+    // IMPORTANTE: Tu código de Canva busca 'data.choices[0].message.content'
+    // Así que devolvemos exactamente esa estructura
+    res.json({
+      choices: [
+        {
+          message: {
+            content: data.choices[0].message.content
+          }
+        }
+      ]
+    });
 
   } catch (error) {
-    console.error("Error en servidor:", error);
-    res.json({ feedback: "Error de conexión. Revisa los logs de Render." });
+    console.error("Error:", error);
+    res.status(500).json({ error: "Error de conexión" });
   }
 });
 
