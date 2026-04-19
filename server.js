@@ -5,22 +5,20 @@ import PDFDocument from "pdfkit";
 
 const app = express();
 
-// Configuración de CORS total
 app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json());
 
 const FILE_PATH = "data.json";
 if (!fs.existsSync(FILE_PATH)) { fs.writeFileSync(FILE_PATH, JSON.stringify([])); }
 
-// Ruta base para confirmar que el servidor vive
 app.get('/', (req, res) => res.send('Servidor Genius Activo ✅'));
 
-// 🤖 EVALUAR CON IA (Compatibilidad Total)
+// 🤖 EVALUAR CON IA (VERSIÓN FINAL DEFINITIVA)
 const handleEvaluate = async (req, res) => {
-  try {
-    const { question, answer } = req.body;
-    console.log("Evaluando:", { question, answer });
+  const { question, answer } = req.body;
+  console.log("Enviando a OpenAI...");
 
+  try {
     const response = await fetch("https://openai.com", {
       method: "POST",
       headers: {
@@ -28,7 +26,7 @@ const handleEvaluate = async (req, res) => {
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o-mini", 
         messages: [
           { role: "system", content: "Eres experto en educación inicial. Evalúa con: Fortalezas, Oportunidades de mejora, Recomendación y Puntaje (1-5)." },
           { role: "user", content: `Pregunta: ${question}\nRespuesta: ${answer}` }
@@ -39,13 +37,14 @@ const handleEvaluate = async (req, res) => {
     const data = await response.json();
 
     if (data.error) {
-      console.error("OpenAI Error:", data.error.message);
-      return res.status(500).json({ error: data.error.message });
+      console.error("Error de OpenAI:", data.error.message);
+      return res.json({ choices: [{ message: { content: "Error de IA: " + data.error.message } }] });
     }
 
-    // Estructura exacta que pide tu código de Canva
+    // Ruta corregida: data.choices[0].message.content
     const aiText = data.choices[0].message.content;
     
+    // Enviamos exactamente lo que tu código de Canva espera
     res.json({
       choices: [
         {
@@ -57,12 +56,11 @@ const handleEvaluate = async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error Servidor:", error);
-    res.status(500).json({ error: "Error interno del servidor" });
+    console.error("Error en el proceso:", error);
+    res.json({ choices: [{ message: { content: "Error de conexión con la IA." } }] });
   }
 };
 
-// Registramos la ruta con y sin barra diagonal para evitar el error HTML 404
 app.post("/evaluate", handleEvaluate);
 app.post("/evaluate/", handleEvaluate);
 
@@ -87,4 +85,4 @@ app.get("/generate-pdf", (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Servidor iniciado en puerto " + PORT));
+app.listen(PORT, () => console.log("Servidor iniciado"));
