@@ -12,45 +12,46 @@ if (!fs.existsSync(FILE_PATH)) fs.writeFileSync(FILE_PATH, JSON.stringify([]));
 
 app.get('/', (req, res) => res.send('Servidor Genius Activo ✅'));
 
-// 🤖 EVALUAR CON IA (VERSIÓN BLINDADA)
+// 🤖 EVALUAR CON IA (VERSIÓN FINAL ANTI-ERRORES)
 const handleEvaluate = async (req, res) => {
   const { question, answer } = req.body;
-  console.log("Iniciando petición a OpenAI...");
+  console.log("Conectando con OpenAI...");
 
   try {
     const apiResponse = await fetch("https://openai.com", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`
+        "Authorization": `Bearer ${process.env.OPENAI_API_KEY.trim()}`
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo", // Cambiado a un modelo más estándar para evitar errores de acceso
+        model: "gpt-3.5-turbo",
         messages: [
           { role: "system", content: "Eres experto en educación inicial. Evalúa con: Fortalezas, Oportunidades de mejora, Recomendación y Puntaje (1-5)." },
           { role: "user", content: `Pregunta: ${question}\nRespuesta: ${answer}` }
-        ],
-        temperature: 0.7
+        ]
       })
     });
 
-    const data = await apiResponse.json();
-
-    if (data.error) {
-      console.error("OpenAI respondió error:", data.error.message);
-      return res.json({ choices: [{ message: { content: "Error de OpenAI: " + data.error.message } }] });
+    // Verificamos si la respuesta es exitosa
+    if (!apiResponse.ok) {
+      const errorText = await apiResponse.text();
+      console.error("Error de OpenAI (No OK):", errorText);
+      return res.json({ choices: [{ message: { content: "Error de API: " + apiResponse.status } }] });
     }
 
-    // Ruta de acceso corregida con validación de existencia
-    const aiText = data?.choices?.[0]?.message?.content || "No se pudo generar el feedback.";
-    console.log("Respuesta recibida correctamente.");
+    const data = await apiResponse.json();
+
+    // Acceso directo y seguro al primer resultado
+    const aiText = data.choices[0].message.content;
+    console.log("¡Respuesta obtenida con éxito!");
 
     res.json({
       choices: [{ message: { content: aiText } }]
     });
 
   } catch (error) {
-    console.error("Error crítico en el proceso:", error.message);
+    console.error("Error fatal:", error.message);
     res.json({ choices: [{ message: { content: "Error de conexión: " + error.message } }] });
   }
 };
