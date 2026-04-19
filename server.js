@@ -5,6 +5,7 @@ import PDFDocument from "pdfkit";
 
 const app = express();
 
+// Configuración de CORS robusta
 app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'Authorization'] }));
 app.use(express.json());
 
@@ -13,9 +14,14 @@ if (!fs.existsSync(FILE_PATH)) { fs.writeFileSync(FILE_PATH, JSON.stringify([]))
 
 app.get('/', (req, res) => res.send('Servidor Genius Activo ✅'));
 
-// 🤖 EVALUAR CON IA (Ruta de datos corregida)
+// 🤖 EVALUAR CON IA (VERSIÓN FINAL GARANTIZADA)
 app.post("/evaluate", async (req, res) => {
-  const { question, answer } = req.body;
+  // Extraemos datos. Si question o answer vienen vacíos de Canva, usamos valores por defecto
+  const question = req.body.question || "Pregunta general";
+  const answer = req.body.answer || "Sin respuesta";
+
+  console.log("Recibido de Canva:", { question, answer }); // Esto aparecerá en tus logs de Render
+
   try {
     const response = await fetch("https://openai.com", {
       method: "POST",
@@ -34,19 +40,23 @@ app.post("/evaluate", async (req, res) => {
 
     const data = await response.json();
 
+    // Si OpenAI devuelve error (ej. sin saldo o clave mal puesta)
     if (data.error) {
-      console.error("Error OpenAI:", data.error.message);
+      console.error("Error de OpenAI:", data.error.message);
       return res.json({ feedback: "Error de API: " + data.error.message });
     }
 
-    // ESTA ES LA LÍNEA CRÍTICA CORREGIDA
-    const aiFeedback = data.choices[0].message.content;
-    
-    res.json({ feedback: aiFeedback });
+    // Acceso ultra seguro a la respuesta
+    if (data.choices && data.choices.length > 0) {
+      const aiFeedback = data.choices[0].message.content;
+      return res.json({ feedback: aiFeedback });
+    } else {
+      return res.json({ feedback: "La IA no devolvió resultados." });
+    }
 
   } catch (error) {
-    console.error("Error Servidor:", error);
-    res.json({ feedback: "Error de conexión con el servicio de IA." });
+    console.error("Error fatal en servidor:", error);
+    res.json({ feedback: "No se pudo conectar con la IA. Revisa los logs." });
   }
 });
 
@@ -56,7 +66,7 @@ app.post("/save", (req, res) => {
     data.push({ ...req.body, date: new Date() });
     fs.writeFileSync(FILE_PATH, JSON.stringify(data, null, 2));
     res.json({ message: "Guardado" });
-  } catch (e) { res.status(500).json({ error: "Error" }); }
+  } catch (e) { res.status(500).json({ error: "Error al guardar" }); }
 });
 
 app.get("/generate-pdf", (req, res) => {
@@ -71,4 +81,4 @@ app.get("/generate-pdf", (req, res) => {
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log("Puerto " + PORT));
+app.listen(PORT, () => console.log("Servidor corriendo en puerto " + PORT));
